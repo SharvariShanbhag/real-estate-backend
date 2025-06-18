@@ -13,7 +13,13 @@ const port = process.env.PORT || 8000;
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:5173'],// Your React app's URL
+   methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
 // Serve static files (e.g., images from /uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));  
@@ -22,8 +28,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/', (req, res) => res.send('Hello World!'));
 
 // API Routes
-app.use('/api/User', userRoute);
-app.use('/api/properties', propertyRoute);
+app.use('/api/users', userRoute);
+app.use('/api/properties', propertyRoute); 
 
 // Start server
 app.listen(port, () => console.log(`Server running on port ${port}`));

@@ -1,16 +1,23 @@
 const express = require('express');
 const propertyController = require('../controllers/propertyController');
-const {auth,isAdmin } = require('../middleware/auth')
-const multer = require('../middleware/multer')
+const { auth, isAdmin } = require('../middleware/auth'); // Import auth and isAdmin
+const upload = require('../middleware/multer'); // Import your configured multer middleware
+
 const router = express.Router();
 
-router.get('/getAllProperties', propertyController.getAllProperties);
-router.get('/getPropertyById/:id', propertyController.getPropertyById);
-router.post('/createProperty',   auth,isAdmin ,multer.single('image'), propertyController.createProperty);
-router.put('/updateProperty/:id', auth,isAdmin , propertyController.updateProperty);
-router.delete('/deleteProperty/:id',  auth,isAdmin , propertyController.deleteProperty);
+// Public routes (no authentication required)
+router.get('/', propertyController.getAllProperties); // Changed to root for clarity
+router.get('/:id', propertyController.getPropertyById); // Changed to root for clarity
 router.get('/search', propertyController.searchProperties);
-router.put('/AddUpdateIntresteUser/:id', auth, propertyController.AddUpdateIntrestedUser)
 
+// Authenticated routes (requires valid JWT)
+router.put('/:id/interested', auth, propertyController.addUpdateInterestedUser); // Use the renamed function
 
-module.exports = router
+// Admin-only routes (requires admin role and valid JWT)
+router.post('/createProperty', 
+    auth,
+     upload.single('image'), propertyController.createProperty); // Correct usage of multer
+router.put('/:id', auth, isAdmin, upload.single('image'), propertyController.updateProperty); // Allow image update
+router.delete('/:id', auth, isAdmin, propertyController.deleteProperty);
+
+module.exports = router;

@@ -1,3 +1,4 @@
+// config/db.js
 const {Sequelize} = require('sequelize')
 require('dotenv').config();
 
@@ -9,7 +10,7 @@ const sequelize = new Sequelize(
         dialect:"mysql",
         logging:false,
         dialectOptions:{
-            // SSL options 
+            // SSL options
         }
     }
 )
@@ -18,11 +19,7 @@ const connectDB = async() => {
     try {
         await sequelize.authenticate();
         console.log("Databse connected Successfully")
-
-    // Automatically alter the tables to match model definitions (you can adjust this based on your need)
-
-        await sequelize.sync({ alter: false })   
-
+        await sequelize.sync({ alter: false}) // <--- Good for production, but in development, consider `alter: true` or `force: true` if schema changes often.
     } catch (error) {
         console.error("Unable to connect", error)
         process.exit(1);
@@ -30,5 +27,4 @@ const connectDB = async() => {
 };
 
 connectDB();
-
-module.exports =  sequelize;
+module.exports = sequelize;
