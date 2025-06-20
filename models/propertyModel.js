@@ -27,18 +27,16 @@ const Property = sequelize.define('Property', {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    type: {
+    type: { // This is the 'For Rent' / 'For Sale' field
         type: DataTypes.ENUM('For Rent', 'For Sale'),
         allowNull: false
     },
     image: {
-        type: DataTypes.STRING(255), // Stores the filename of the uploaded image
+        type: DataTypes.STRING(255),
         allowNull: false,
-        // Removed unique: true from here. Filenames don't need to be unique across the entire table.
-        // A property's ID is unique, not necessarily its image name globally.
     },
-    size: {
-        type: DataTypes.STRING(100), // e.g., "1500 sq ft" or "0.5 acres"
+    size: { // This is the size field, which is a STRING (e.g., "1500 sq ft")
+        type: DataTypes.STRING(100),
         allowNull: true
     },
     area: { // If this means land area, could be separate from 'size' which might be built-up area
@@ -49,7 +47,7 @@ const Property = sequelize.define('Property', {
         type: DataTypes.INTEGER,
         allowNull: true,
         validate: {
-            min: 0 // Cannot have negative bedrooms
+            min: 0
         }
     },
     bathroom: {
@@ -72,8 +70,8 @@ const Property = sequelize.define('Property', {
         allowNull: true,
         validate: {
             isInt: true,
-            min: 1800, // Reasonable minimum year
-            max: new Date().getFullYear() + 5 // Not too far in the future
+            min: 1800,
+            max: new Date().getFullYear() + 5
         }
     },
     address: {
@@ -84,7 +82,7 @@ const Property = sequelize.define('Property', {
         type: DataTypes.STRING(20),
         allowNull: true
     },
-    city_area: { // More specific area within a city (e.g., "Koregaon Park")
+    city_area: { // This is the specific area within a city (e.g., "Koregaon Park")
         type: DataTypes.STRING(100),
         allowNull: true
     },
@@ -95,16 +93,16 @@ const Property = sequelize.define('Property', {
     country: {
         type: DataTypes.STRING(100),
         allowNull: true,
-        defaultValue: 'India' // Default changed to India
+        defaultValue: 'India'
     },
     interestedUsers: {
-        type: DataTypes.JSON, // Stores an array of integers (user IDs)
+        type: DataTypes.JSON,
         allowNull: true,
         defaultValue: []
     }
 }, {
-    tableName: 'Properties', // Explicit table name
-    timestamps: true // createdAt and updatedAt fields
+    tableName: 'Properties',
+    timestamps: true
 });
 
 module.exports = Property;

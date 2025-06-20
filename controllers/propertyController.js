@@ -3,8 +3,6 @@ const { Op } = require('sequelize'); // Make sure you import Op for search
 const fs = require('fs');
 const path = require('path');
 
-// Assuming UPLOAD_FOLDER is defined elsewhere, e.g., in config or app.js
-// If not, you might need to define it here or import it.
 const UPLOAD_FOLDER = 'uploads'; // Adjust if your upload folder name is different
 
 // Helper for detailed error logging
@@ -14,17 +12,84 @@ const logError = (context, error) => {
     if (error.name) console.error(`Error Name: ${error.name}`);
     if (error.errors) { // Sequelize validation errors details
         console.error("Sequelize Validation Errors:");
-        error.errors.forEach(err => console.error(`  - Path: ${err.path}, Value: ${err.value}, Message: ${err.message}`));
+        error.errors.forEach(err => console.error(`  - Path: ${err.path}, Value: ${err.value}, Message: ${err.message}`));
     }
     console.error(`Stack Trace:`, error.stack);
     console.error(`--- [PropertyController - ${context}] END ERROR ---\n`);
 };
 
-// --- Get all properties ---
+// --- Get all properties (with filtering, pagination, and sorting) ---
 const getAllProperties = async (req, res) => {
     try {
-        const properties = await Property.findAll();
-        res.status(200).json({ success: true, properties });
+        // --- DEBUGGING: Log incoming query parameters ---
+        console.log("Backend: getAllProperties - Received Query:", req.query);
+
+        const { type, location, bedrooms, minPrice, maxPrice, limit = 9, offset = 0 } = req.query;
+        const whereClause = {};
+
+        if (type && type !== 'ALL_UNITS') { // Only apply type filter if not 'ALL_UNITS'
+            whereClause.type = type;
+        }
+
+        if (location) {
+            whereClause[Op.or] = [
+                { city: { [Op.like]: `%${location}%` } },
+                { address: { [Op.like]: `%${location}%` } },
+                { city_area: { [Op.like]: `%${location}%` } },
+                { state: { [Op.like]: `%${location}%` } },
+                { country: { [Op.like]: `%${location}%` } }
+            ];
+        }
+
+        if (bedrooms) {
+            const numBedrooms = parseInt(bedrooms, 10);
+            if (!isNaN(numBedrooms)) {
+                if (numBedrooms === 3) { // Special handling for '3+' (e.g., if dropdown value is '3')
+                    whereClause.bedroom = { [Op.gte]: 3 };
+                } else if (numBedrooms > 0) {
+                    whereClause.bedroom = numBedrooms;
+                }
+            }
+        }
+
+        if (minPrice || maxPrice) {
+            whereClause.price = {};
+            if (minPrice) {
+                const parsedMinPrice = parseFloat(minPrice);
+                if (!isNaN(parsedMinPrice)) {
+                    whereClause.price[Op.gte] = parsedMinPrice;
+                }
+            }
+            if (maxPrice) {
+                const parsedMaxPrice = parseFloat(maxPrice);
+                if (!isNaN(parsedMaxPrice)) {
+                    whereClause.price[Op.lte] = parsedMaxPrice;
+                }
+            }
+        }
+
+        const parsedLimit = parseInt(limit, 10);
+        const parsedOffset = parseInt(offset, 10);
+
+        // --- DEBUGGING: Log final whereClause and pagination ---
+        console.log("Backend: getAllProperties - Final Where Clause:", whereClause);
+        console.log("Backend: getAllProperties - Limit:", parsedLimit, "Offset:", parsedOffset);
+
+
+        const { count, rows: properties } = await Property.findAndCountAll({
+            where: whereClause,
+            limit: parsedLimit,
+            offset: parsedOffset,
+            order: [['createdAt', 'DESC']] // Order by creation date, newest first
+        });
+
+        res.status(200).json({
+            success: true,
+            totalProperties: count,
+            properties,
+            currentPage: Math.floor(parsedOffset / parsedLimit),
+            totalPages: Math.ceil(count / parsedLimit)
+        });
     } catch (error) {
         logError('getAllProperties', error);
         res.status(500).json({ success: false, error: 'Failed to fetch properties', details: error.message });
@@ -253,30 +318,30 @@ const updateProperty = async (req, res) => {
 // --- Delete property ---
 const deleteProperty = async (req, res) => {
     try {
-        const { id } = req.params; // This is CORRECT! It correctly destructures 'id' from req.params.
+        const { id } = req.params;
 
-        const property = await Property.findByPk(id); // This is CORRECT! Uses the 'id' to find the property.
+        const property = await Property.findByPk(id);
 
         if (!property) {
-            return res.status(404).json({ success: false, message: 'Property not found' }); // Correct handling.
+            return res.status(404).json({ success: false, message: 'Property not found' });
         }
 
         // Delete the associated image file from the 'uploads' folder
         if (property.image) {
-            const imagePath = path.join(__dirname, '..', UPLOAD_FOLDER, property.image); // Correct use of path.join
-            if (fs.existsSync(imagePath)) { // Correct check
-                fs.unlink(imagePath, (err) => { // Correct file deletion
+            const imagePath = path.join(__dirname, '..', UPLOAD_FOLDER, property.image);
+            if (fs.existsSync(imagePath)) {
+                fs.unlink(imagePath, (err) => {
                     if (err) console.error("Failed to delete image file:", imagePath, err);
                 });
             }
         }
 
-        await property.destroy(); // Correctly destroys the record via Sequelize.
-        res.status(200).json({ success: true, message: 'Property deleted successfully' }); // Correct success response.
+        await property.destroy();
+        res.status(200).json({ success: true, message: 'Property deleted successfully' });
 
     } catch (error) {
-        logError('deleteProperty', error); // Assumed custom logger
-        res.status(500).json({ success: false, error: 'Failed to delete property', details: error.message }); // Correct error response
+        logError('deleteProperty', error);
+        res.status(500).json({ success: false, error: 'Failed to delete property', details: error.message });
     }
 };
 
