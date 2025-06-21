@@ -1,4 +1,4 @@
-// middleware/auth.js
+// backend/middleware/auth.js
 
 const jwt = require('jsonwebtoken');
 require("dotenv").config(); // Ensure dotenv is loaded
@@ -21,8 +21,11 @@ const auth = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Fetch user from DB to ensure they still exist and get up-to-date role/info
-        // This is crucial for roles that might change after token issuance.
-        const user = await User.findByPk(decoded.id); // Use decoded.id from JWT payload
+        // FIX: Explicitly specify attributes to select, excluding 'phone' if it causes issues
+        const user = await User.findByPk(decoded.id, {
+            attributes: ['id', 'name', 'email', 'role'] // Exclude 'phone' here (or any other problematic columns)
+        });
+
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -30,18 +33,20 @@ const auth = async (req, res, next) => {
             });
         }
 
-        // Attach the full user object from the database to the request
-        req.user = user; // req.user now contains { id, name, email, password, role, createdAt, updatedAt }
-        next();
+        // Attach the fetched user object (without 'phone' if excluded) to the request
+        req.user = user;
+        next(); // Proceed to the next middleware or route handler
 
     } catch (error) {
-        console.error("Auth middleware error:", error.message);
+        // Log the specific error name for better debugging
+        console.error("Auth middleware error:", error.name, error.message);
         if (error.name === 'JsonWebTokenError') {
             return res.status(401).json({ success: false, message: "Invalid token." });
         }
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ success: false, message: "Token expired. Please log in again." });
         }
+        // Catch any other unexpected errors during the process
         res.status(500).json({ success: false, message: "Server error during authentication.", error: error.message });
     }
 };

@@ -1,84 +1,134 @@
+// // backend/server.js
+
 // const express = require('express');
 // const cors = require('cors');
 // const path = require('path');
-// require('dotenv').config();
-// require('./config/db'); // Sequelize DB connection
+// require('dotenv').config(); // Load environment variables from .env file
 
-// // Route Imports
-// const userRoute = require('./routes/userRoute');
-// const propertyRoute = require('./routes/propertyRoute');
+// // --- Database Connection and Model Associations ---
+// // IMPORTANT: Ensure your config/db.js connects to the database (e.g., sequelize.authenticate())
+// // AND that your models/index.js (if you have one) sets up all Sequelize model associations
+// // (e.g., User.hasMany(Inquiry), Inquiry.belongsTo(User), etc.).
+// // By just requiring './models', you ensure the association logic runs.
+// require('./config/db'); // This should establish the DB connection
+// require('./models');    // This should define models and their associations
+
+// // --- Route Imports ---
+// const userRoute = require('./routes/userRoute');       // Example: /api/users
+// const propertyRoute = require('./routes/propertyRoute'); // Example: /api/properties
+// const inquiryRoute = require('./routes/inquiryRoute'); // Example: /api/inquiries
+// const authRoutes = require('./routes/authRoutes');     // IMPORTANT: Your authentication routes (e.g., /api/auth/register, /api/auth/login)
 
 // const app = express();
 // const port = process.env.PORT || 8000;
 
-// // Middleware
-// app.use(express.json());
-// // app.use(cors());
+// // --- Middleware ---
+// app.use(express.json()); // Middleware to parse JSON request bodies
+// // Configure CORS for specific origins and allowed methods/headers
 // app.use(cors({
-//   origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],// Your React app's URL
-//    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-//   allowedHeaders: ['Content-Type', 'Authorization'],
-//   credentials: true
+//     origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'], // Your React app's URLs
+//     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+//     allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers including Authorization for tokens
+//     credentials: true // Allow sending cookies/auth headers from client
 // }));
 
-// // Serve static files (e.g., images from /uploads)
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));  
+// // Serve static files (e.g., images from the 'uploads' directory)
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// // Test route
-// app.get('/', (req, res) => res.send('Hello World!'));
+// // --- Test Route ---
+// app.get('/', (req, res) => res.send('Hello World from Backend!'));
 
-// // API Routes
+// // --- API Routes ---
+// // Mount your routers at their respective base paths
 // app.use('/api/users', userRoute);
-// app.use('/api/properties', propertyRoute); 
+// app.use('/api/properties', propertyRoute);
+// app.use('/api/inquiries', inquiryRoute);
+// app.use('/api/auth', authRoutes); // <-- CRITICAL: This line makes your /api/auth routes accessible!
 
-// // Start server
-// app.listen(port, () => console.log(`Server running on port ${port}`));
+// // --- Error Handling Middleware (Optional but Recommended) ---
+// // Catch 404 and forward to error handler
+// app.use((req, res, next) => {
+//     const error = new Error('Not Found');
+//     error.status = 404;
+//     next(error);
+// });
 
-// backend/server.js
+// // General error handler
+// app.use((error, req, res, next) => {
+//     res.status(error.status || 500);
+//     res.json({
+//         error: {
+//             message: error.message,
+//             // Optionally, include stack trace in development
+//             // stack: process.env.NODE_ENV === 'production' ? null : error.stack
+//         }
+//     });
+// });
+
+// // --- Start Server ---
+// // Assumes that database authentication and synchronization are handled
+// // within './config/db.js' or './models/index.js'
+// app.listen(port, () => {
+//     console.log(`Server running on port ${port}`);
+// });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
-// IMPORTANT: Ensure this line correctly imports and initializes your Sequelize models and associations.
-// If you created a models/index.js, require that. Otherwise, ensure all models are required here
-// and associations are defined immediately after.
-const sequelize = require('./config/db'); // Your database connection instance
-// const { Property, User, Inquiry } = require('./models'); // If you have models/index.js exporting them
+// --- Database Connection and Model Associations ---
+// Your existing setup should handle this. Make sure generalInquiryModel.js is loaded.
+require('./config/db');
+require('./models'); // This should now also load GeneralInquiry if your index.js is set up
 
-// If you have models/index.js to set up associations, ensure it's required:
-require('./models'); // This will run the associations defined in index.js
-
-// Route Imports
+// --- Route Imports ---
 const userRoute = require('./routes/userRoute');
 const propertyRoute = require('./routes/propertyRoute');
-const inquiryRoute = require('./routes/inquiryRoute'); // <-- NEW: Import your inquiry routes
+const inquiryRoute = require('./routes/inquiryRoute'); // For existing property-related inquiries
+const generalInquiryRoute = require('./routes/generalInquiryRoute'); // <-- NEW: Import the new route
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 const port = process.env.PORT || 8000;
 
-// Middleware
+// --- Middleware ---
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'], // Your React app's URL
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+    origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
 
-// Serve static files (e.g., images from /uploads)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Test route
-app.get('/', (req, res) => res.send('Hello World!'));
+// --- Test Route ---
+app.get('/', (req, res) => res.send('Hello World from Backend!'));
 
-// API Routes
+// --- API Routes ---
 app.use('/api/users', userRoute);
 app.use('/api/properties', propertyRoute);
-app.use('/api/inquiries', inquiryRoute); // <-- NEW: Use your inquiry routes
+app.use('/api/inquiries', inquiryRoute); // Existing property-related inquiries
+app.use('/api/general-inquiries', generalInquiryRoute); // <-- NEW: Mount the new route
+app.use('/api/auth', authRoutes);
 
-// Start server
-// Your config/db.js already calls `sequelize.authenticate()` and `sequelize.sync()`.
-// So, you don't need to duplicate that here. Just start the server after that process
-// in config/db.js is implicitly done.
-app.listen(port, () => console.log(`Server running on port ${port}`));
+// --- Error Handling Middleware ---
+app.use((req, res, next) => {
+    const error = new Error('Not Found');
+    error.status = 404;
+    next(error);
+});
+
+app.use((error, req, res, next) => {
+    res.status(error.status || 500);
+    res.json({
+        error: {
+            message: error.message,
+        }
+    });
+});
+
+// --- Start Server ---
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});

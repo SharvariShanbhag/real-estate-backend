@@ -24,6 +24,10 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING(100), // Store hashed password
         allowNull: false,
     },
+    phone: { // Add this
+        type: DataTypes.STRING, // Or INTEGER if you store it as a number
+        allowNull: true, // Allow null if phone is optional for users
+    },
     role: { // Using 'role' instead of 'isAdmin' for better scalability (e.g., 'user', 'admin')
         type: DataTypes.ENUM('user', 'admin'),
         defaultValue: 'user',
